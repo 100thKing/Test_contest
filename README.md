@@ -69,3 +69,7 @@ cd ns-allinone-3.41/ns-3.41
 На данный момент задание не выплонено:
 * Не получены характеристики Rlc для Dl
 * Не получены характерискики MAC для Dl
+
+Полученные данные:
+* [Rlc для Ul](https://github.com/100thKing/Test_contest/blob/main/source/UlRlcStats.txt)
+* [MAC для Ul](https://github.com/100thKing/Test_contest/blob/main/source/UlMacStats.txt)
