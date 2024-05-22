@@ -9,18 +9,18 @@ using namespace std;
 string line;
 ifstream DL_RLC("source/DlRlcStats.txt");
 ifstream UL_RLC("source/UlRlcStats.txt");
-float Tx_DL_1 = 0;
-float Tx_DL_2 = 0;
-float Rx_DL_1 = 0;
-float Rx_DL_2 = 0;
-float Tx_UL_1 = 0;
-float Tx_UL_2 = 0;
-float Rx_UL_1 = 0;
-float Rx_UL_2 = 0;
-float time = 0; 
 
 int main() 
 {
+    float Tx_DL_1 = 0;
+    float Tx_DL_2 = 0;
+    float Rx_DL_1 = 0;
+    float Rx_DL_2 = 0;
+    float Tx_UL_1 = 0;
+    float Tx_UL_2 = 0;
+    float Rx_UL_1 = 0;
+    float Rx_UL_2 = 0;
+    float time = 0; 
 
     if (!DL_RLC || !UL_RLC) 
     {
@@ -82,6 +82,7 @@ int main()
     DL_RLC.close();
     UL_RLC.close();
 
+    cout.precision(10);
     cout << "Time: " << time << endl;
     cout << "Throughput_Tx_Dl_Client_1: " << Tx_DL_1 / time << " Bytes per second" << endl;
     cout << "Throughput_Rx_Dl_Client_1: " << Rx_DL_1 / time << " Bytes per second" << endl;
