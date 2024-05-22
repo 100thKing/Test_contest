@@ -71,7 +71,7 @@ cd ns-allinone-3.41/ns-3.41
     * UlRlcStats.txt
 
 * Для вывода Throughput из RLC уровня используем файл script.cpp
-    * В коде меняем значение переменных DL_RLC и UL_RLC на путь до соответствующих текстовых файлов
+    * В коде меняем значение переменных DL_RLC и UL_RLC на путь до соответствующих текстовых файлов(DlRlcStats.txt и UlRlcStats.txt)
     * Компилируем и запускаем файл:
     ```Shell
     g++ script.cpp -o run
@@ -82,7 +82,7 @@ cd ns-allinone-3.41/ns-3.41
 </details>
 
 ## Результат
-
+###### Что означают элементы в таблице можно посмотреть [здесь](https://www.nsnam.org/docs/models/html/lte-user.html#simulation-output)
 * [MAC DL Stats](source/DlMacStats.txt)
 * [MAC UL STATS](source/UlMacStats.txt)
 * [RLC DL Stats](source/DlRlcStats.txt)
@@ -91,3 +91,81 @@ cd ns-allinone-3.41/ns-3.41
 * [PDCP UL Stats](source/UlPdcpStats.txt)
 * Throughput
 <img src = "source/Throughput.png">
+
+
+## Описание кода
+
+*За основу были взяты части [кода из документации](https://www.nsnam.org/docs/models/html/lte-user.html#basic-simulation-program)*
+
+### Конфигурация модели
+```cpp
+uint16_t numNodePairs = 2;
+Time simTime = Seconds(10.0);
+bool epc = true;
+bool disableDl = false;
+bool disableUl = false;
+```
+Этот код устанавливает параметры модели, такие как количество пар узлов, время симуляции, наличие EPC и возможность отключения передачи данных в направлении DL и UL.
+
+### Настройка атрибутов по умолчанию
+```cpp
+Config::SetDefault("ns3::UdpClient::Interval", TimeValue(MilliSeconds(1)));
+Config::SetDefault("ns3::UdpClient::MaxPackets", UintegerValue(1000000));
+Config::SetDefault("ns3::LteRlcUm::MaxTxBufferSize", UintegerValue(10 * 1024));
+```
+Этот код устанавливает некоторые атрибуты по умолчанию для компонентов, таких как UdpClient и LteRlcUm.
+
+### Создание сети LTE
+```cpp
+Ptr<LteHelper> lteHelper = CreateObject<LteHelper>();
+Ptr<PointToPointEpcHelper> epcHelper = CreateObject<PointToPointEpcHelper>();
+lteHelper->SetEpcHelper(epcHelper);
+lteHelper->SetSchedulerType("ns3::PfFfMacScheduler");
+```
+Этот код создает объекты LteHelper и PointToPointEpcHelper для управления LTE сетью и эмуляции EPC.
+
+### Создание узлов и установка соединений
+```cpp
+NodeContainer remoteHostContainer;
+remoteHostContainer.Create(1);
+NodeContainer enbNodes;
+NodeContainer ueNodes;
+```
+Этот код создает контейнеры узлов для удаленного хоста, eNB и UE.
+
+### Установка мобильности и сетевых устройств
+```cpp
+MobilityHelper mobility;
+mobility.SetMobilityModel("ns3::ConstantPositionMobilityModel");
+mobility.Install(enbNodes);
+mobility.Install(ueNodes);
+NetDeviceContainer enbDevs;
+NetDeviceContainer ueDevs;
+enbDevs = lteHelper->InstallEnbDevice(enbNodes);
+ueDevs = lteHelper->InstallUeDevice(ueNodes);
+```
+Этот код устанавливает модель мобильности и сетевые устройства для узлов eNB и UE.
+
+### Настройка IP адресов и маршрутизации
+```cpp
+Ipv4InterfaceContainer internetIpIfaces = ipv4h.Assign(internetDevices);
+Ipv4InterfaceContainer ueIpIface = epcHelper->AssignUeIpv4Address(NetDeviceContainer(ueDevs));
+```
+Этот код назначает IP адреса и устанавливает маршруты для узлов.
+
+### Установка приложений
+```cpp
+ApplicationContainer clientApps;
+ApplicationContainer serverApps;
+```
+Этот код создает контейнеры для клиентских и серверных приложений.
+
+### Запуск симуляции
+```cpp
+serverApps.Start(Seconds(1.0));
+clientApps.Start(Seconds(1.0));
+Simulator::Stop(simTime);
+Simulator::Run();
+Simulator::Destroy();
+```
+Этот код запускает приложения и симуляцию, останавливает ее по истечении времени и завершает работу симулятора.
