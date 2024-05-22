@@ -48,7 +48,6 @@ cd ns-allinone-3.41/ns-3.41
 ```Shell
 ./ns3 build
 ```
-
 </details>
 
 ## Использование кода
@@ -60,10 +59,33 @@ cd ns-allinone-3.41/ns-3.41
 ```Shell
 ./ns3 run myCode.cc
 ```
+
+* После этого в папке ns-3.41 появятся следующие файлы:
+    * DlMacStats.txt
+    * DlPdcpStats.txt
+    * DlRlcStats.txt
+    * UlMacStats.txt
+    * UlPdcpStats.txt
+    * UlRlcStats.txt
+
+* Для вывода Throughput из RLC уровня используем файл script.cpp
+    * В коде меняем значение переменных DL_RLC и UL_RLC на путь до соответствующих текстовых файлов
+    * Компилируем и запускаем файл:
+    ```Shell
+    g++ script.cpp -o run
+    ./run
+    ```
+
+
 </details>
 
 ## Результат
 
-На данный момент задание не выплонено:
-* Не получены характеристики Rlc для Dl
-* Не получены характерискики MAC для Dl
+* [MAC DL Stats](source/DlMacStats.txt)
+* [MAC UL STATS](source/UlMacStats.txt)
+* [RLC DL Stats](source/DlRlcStats.txt)
+* [RLC UL Stats](source/UlRlcStats.txt)
+* [PDCP DL Stats](source/DlPdcpStats.txt)
+* [PDCP UL Stats](source/UlPdcpStats.txt)
+* Throughput
+<img src = "source/Throughput.png">
