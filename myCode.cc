@@ -1,95 +1,171 @@
-#include "ns3/core-module.h"
-#include "ns3/network-module.h"
-#include "ns3/internet-module.h"
-#include "ns3/lte-module.h"
-#include "ns3/mobility-module.h"
-#include "ns3/config-store-module.h"
-#include "ns3/applications-module.h"
+#include <ns3/core-module.h>
+#include <ns3/network-module.h>
+#include <ns3/mobility-module.h>
+#include <ns3/lte-module.h>
+#include <ns3/applications-module.h>
+#include <ns3/config-store-module.h>
+#include <ns3/internet-module.h>
+#include <ns3/point-to-point-module.h>
 
 using namespace ns3;
 
-int main (int argc, char *argv[])
+NS_LOG_COMPONENT_DEFINE ("lte_example");
+
+int main(int argc, char *argv[])
 {
-  CommandLine cmd;
-  cmd.Parse (argc, argv);
+    // Конфигурация модели
+    uint16_t numNodePairs = 2;
+    Time simTime = Seconds(10.0);  // Увеличила время симуляции
+    bool epc = true;
+    bool disableDl = false;
+    bool disableUl = false;
 
-  // Create LTE Helper
-  Ptr<LteHelper> lteHelper = CreateObject<LteHelper> ();
+    // change some default attributes so that they are reasonable for
+    // this scenario, but do this before processing command line
+    // arguments, so that the user is allowed to override these settings
+    Config::SetDefault("ns3::UdpClient::Interval", TimeValue(MilliSeconds(1)));
+    Config::SetDefault("ns3::UdpClient::MaxPackets", UintegerValue(1000000));
+    Config::SetDefault("ns3::LteRlcUm::MaxTxBufferSize", UintegerValue(10 * 1024));
 
-  // Create EPC Helper
-  Ptr<PointToPointEpcHelper> epcHelper = CreateObject<PointToPointEpcHelper> ();
-  lteHelper->SetEpcHelper (epcHelper);
 
-  // Create Node Container for eNB and UEs
-  NodeContainer enbNodes;
-  NodeContainer ueNodes;
-  enbNodes.Create (1);
-  ueNodes.Create (2);
+    // lteHelper - глобальное управление сетью LTE
+    Ptr<LteHelper> lteHelper = CreateObject<LteHelper>();
+    Ptr<PointToPointEpcHelper> epcHelper = CreateObject<PointToPointEpcHelper>();
+    lteHelper->SetEpcHelper(epcHelper);
+    lteHelper->SetSchedulerType("ns3::PfFfMacScheduler");
+    // lteHelper->EnableLogComponents();
 
-  // Install Mobility Model
-  MobilityHelper mobility;
-  mobility.SetMobilityModel ("ns3::ConstantPositionMobilityModel");
-  mobility.Install (enbNodes);
-  mobility.Install (ueNodes);
+    Ptr<Node> pgw = epcHelper->GetPgwNode();
 
-  // Install LTE Devices to the nodes
-  NetDeviceContainer enbLteDevs = lteHelper->InstallEnbDevice (enbNodes);
-  NetDeviceContainer ueLteDevs = lteHelper->InstallUeDevice (ueNodes);
+    // Create a single RemoteHost
+    NodeContainer remoteHostContainer;
+    remoteHostContainer.Create(1);
+    Ptr<Node> remoteHost = remoteHostContainer.Get(0);
+    InternetStackHelper internet;
+    internet.Install(remoteHostContainer);
 
-  // Install the IP stack on the UEs
-  InternetStackHelper internet;
-  internet.Install (ueNodes);
+    // Create the Internet
+    PointToPointHelper p2ph;
+    p2ph.SetDeviceAttribute("DataRate", DataRateValue(DataRate("100Gb/s")));
+    p2ph.SetDeviceAttribute("Mtu", UintegerValue(1500));
+    p2ph.SetChannelAttribute("Delay", TimeValue(MilliSeconds(10)));
+    NetDeviceContainer internetDevices = p2ph.Install(pgw, remoteHost);
+    Ipv4AddressHelper ipv4h;
+    ipv4h.SetBase("1.0.0.0", "255.0.0.0");
+    Ipv4InterfaceContainer internetIpIfaces = ipv4h.Assign(internetDevices);
+    Ipv4Address remoteHostAddr = internetIpIfaces.GetAddress(1);
 
-  // Assign IP addresses to UEs
-  Ipv4AddressHelper ipv4h;
-  ipv4h.SetBase ("10.1.0.0", "255.255.255.0");
-  Ipv4InterfaceContainer ueIpIface;
-  ueIpIface = ipv4h.Assign (ueLteDevs);
+    Ipv4StaticRoutingHelper ipv4RoutingHelper;
+    Ptr<Ipv4StaticRouting> remoteHostStaticRouting =
+        ipv4RoutingHelper.GetStaticRouting(remoteHost->GetObject<Ipv4>());
+    remoteHostStaticRouting->AddNetworkRouteTo(Ipv4Address("7.0.0.0"), Ipv4Mask("255.0.0.0"), 1);
 
-  // Attach UEs to eNB
-  lteHelper->Attach (ueLteDevs, enbLteDevs.Get (0));
+    // Создание 1 eNb и 2 UE
+    NodeContainer enbNodes;
+    NodeContainer ueNodes;
+    enbNodes.Create(1);
+    ueNodes.Create(2);
 
-  // Install and start applications on UEs and remote host
-  uint16_t dlPort = 1234;
-  uint16_t ulPort = 2000;
+    MobilityHelper mobility;
+    mobility.SetMobilityModel("ns3::ConstantPositionMobilityModel");
+    mobility.Install(enbNodes);
+    mobility.Install(ueNodes);
 
-  ApplicationContainer clientApps;
-  ApplicationContainer serverApps;
+    NetDeviceContainer enbDevs;
+    NetDeviceContainer ueDevs;
+    enbDevs = lteHelper->InstallEnbDevice(enbNodes);
+    ueDevs = lteHelper->InstallUeDevice(ueNodes);
 
-  UdpClientHelper dlClient (ueIpIface.GetAddress (0), dlPort);
-  dlClient.SetAttribute ("Interval", TimeValue (MilliSeconds (10)));
-  dlClient.SetAttribute ("PacketSize", UintegerValue (1024)); // Размер пакета 1024 байт
-  dlClient.SetAttribute ("MaxPackets", UintegerValue (1000000));
+    // Install the IP stack on the UEs
+    internet.Install(ueNodes);
+    Ipv4InterfaceContainer ueIpIface;
+    ueIpIface = epcHelper->AssignUeIpv4Address(NetDeviceContainer(ueDevs));
+    // Assign IP address to UEs, and install applications
+    for (uint32_t u = 0; u < ueNodes.GetN(); ++u)
+    {
+        Ptr<Node> ueNode = ueNodes.Get(u);
+        // Set the default gateway for the UE
+        Ptr<Ipv4StaticRouting> ueStaticRouting =
+            ipv4RoutingHelper.GetStaticRouting(ueNode->GetObject<Ipv4>());
+        ueStaticRouting->SetDefaultRoute(epcHelper->GetUeDefaultGatewayAddress(), 1);
+    }
 
-  UdpServerHelper dlServer (dlPort);
-  serverApps.Add (dlServer.Install (ueNodes.Get (0)));
+    // Attach one UE per eNodeB
+    lteHelper->Attach(ueDevs, enbDevs.Get(0));
 
-  clientApps.Add (dlClient.Install (ueNodes.Get (1)));
+    // Install and start applications on UEs and remote host
+    uint16_t dlPort = 1100;
+    uint16_t ulPort = 2000;
+    ApplicationContainer clientApps;
+    ApplicationContainer serverApps;
+    Ptr<UniformRandomVariable> startTimeSeconds = CreateObject<UniformRandomVariable>();
+    for (uint32_t u = 0; u < ueNodes.GetN(); ++u)
+    {
+        if (!disableDl)
+        {
+            PacketSinkHelper dlPacketSinkHelper("ns3::UdpSocketFactory",
+                                                InetSocketAddress(Ipv4Address::GetAny(), dlPort));
+            serverApps.Add(dlPacketSinkHelper.Install(ueNodes.Get(u)));
 
-  UdpClientHelper ulClient (ueIpIface.GetAddress (1), ulPort);
-  ulClient.SetAttribute ("Interval", TimeValue (MilliSeconds (10)));
-  ulClient.SetAttribute ("PacketSize", UintegerValue (1024)); // Размер пакета 1024 байт
-  ulClient.SetAttribute ("MaxPackets", UintegerValue (1000000));
 
-  UdpServerHelper ulServer (ulPort);
-  serverApps.Add (ulServer.Install (ueNodes.Get (1)));
+            UdpClientHelper dlClient(ueIpIface.GetAddress(u), dlPort);
+            //dlClient.SetAttribute("Interval", TimeValue(MilliSeconds(1)));  // интервал отправки пакетов
+            // dlClient.SetAttribute("PacketSize", UintegerValue(1024));  // размер пакета 1024 байт
+            // dlClient.SetAttribute("MaxPackets", UintegerValue(1000000));  // максимальное количество пакетов
+            clientApps.Add(dlClient.Install(remoteHost));
+        }
 
-  clientApps.Add (ulClient.Install (ueNodes.Get (0)));
+        if (!disableUl)
+        {
+            ++ulPort;
+            PacketSinkHelper ulPacketSinkHelper("ns3::UdpSocketFactory",
+                                                InetSocketAddress(Ipv4Address::GetAny(), ulPort));
+            serverApps.Add(ulPacketSinkHelper.Install(remoteHost));
 
-  serverApps.Start (Seconds (1.0));
-  clientApps.Start (Seconds (1.0));
-  serverApps.Stop (Seconds (10.0));
-  clientApps.Stop (Seconds (10.0));
+            UdpClientHelper ulClient(remoteHostAddr, ulPort);
+            //ulClient.SetAttribute("Interval", TimeValue(MilliSeconds(1)));  // интервал отправки пакетов
+            // ulClient.SetAttribute("PacketSize", UintegerValue(1024));  // Размер пакета 1024 байт
+            // ulClient.SetAttribute("MaxPackets", UintegerValue(1000000));  // максимальное количество пакетов
+            clientApps.Add(ulClient.Install(ueNodes.Get(u)));
+        }
 
-  // Configure the scheduler
-  lteHelper->SetSchedulerType ("ns3::PfFfMacScheduler");
+        Ptr<EpcTft> tft = Create<EpcTft>();
+        if (!disableDl)
+        {
+            EpcTft::PacketFilter dlpf;
+            dlpf.localPortStart = dlPort;
+            dlpf.localPortEnd = dlPort;
+            tft->Add(dlpf);
+        }
+        if (!disableUl)
+        {
+            EpcTft::PacketFilter ulpf;
+            ulpf.remotePortStart = ulPort;
+            ulpf.remotePortEnd = ulPort;
+            tft->Add(ulpf);
+        }
 
-  // Enable key performance metrics output
-  lteHelper->EnableRlcTraces ();
-  lteHelper->EnableMacTraces ();
+        if (!disableDl || !disableUl)
+        {
+            EpsBearer bearer(EpsBearer::GBR_CONV_VIDEO);
+            lteHelper->ActivateDedicatedEpsBearer(ueDevs.Get(u), bearer, tft);
+        }
+    }
 
-  Simulator::Stop (Seconds (10.0));
-  Simulator::Run ();
-  Simulator::Destroy ();
-  return 0;
+    // Старт приложений через 1 секунду после начала симуляции
+    serverApps.Start(Seconds(1.0));
+    clientApps.Start(Seconds(1.0));
+
+    lteHelper->EnableMacTraces();
+    lteHelper->EnableRlcTraces();
+    if (epc)
+    {
+        lteHelper->EnablePdcpTraces();
+    }
+
+    Simulator::Stop(simTime);
+    Simulator::Run();
+    Simulator::Destroy();
+
+    return 0;
 }
