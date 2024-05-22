@@ -4,7 +4,15 @@
 #### Версия NS: ns-allinone-3.41
 #### Язык: C++
 
-## Тестовое задание
+# Содержание
+* [Тестовое задание](#task)
+* [Настройка NS-3](#settings)
+* [Использование кода](#usage)
+* [Описание кода](#description)
+* [Результат](#result)
+
+
+<a name=“task”><h2>Тестовое задание</h2></a>
 <details><summary>Задание</summary>
 
 **Основное задание**
@@ -24,7 +32,7 @@
 
 </details>
 
-## Настройка NS-3
+<a name=“settings”><h2>Настройка NS-3</h2></a>
 <details><summary> Установка NS-3</summary>
   
 * Скачать архив: https://www.nsnam.org/releases/latest
@@ -52,7 +60,7 @@ cd ns-allinone-3.41/ns-3.41
 ```
 </details>
 
-## Использование кода
+<a name="usage"><h2>Использование кода</h2></a>
 <details><summary>Пример использования кода</summary>
 
 * Файл myCode вставить в ns-3.41/scratch
@@ -81,19 +89,7 @@ cd ns-allinone-3.41/ns-3.41
 
 </details>
 
-## Результат
-###### Что означают элементы в таблице можно посмотреть [здесь](https://www.nsnam.org/docs/models/html/lte-user.html#simulation-output)
-* [MAC DL Stats](source/DlMacStats.txt)
-* [MAC UL STATS](source/UlMacStats.txt)
-* [RLC DL Stats](source/DlRlcStats.txt)
-* [RLC UL Stats](source/UlRlcStats.txt)
-* [PDCP DL Stats](source/DlPdcpStats.txt)
-* [PDCP UL Stats](source/UlPdcpStats.txt)
-* Throughput
-<img src = "source/Throughput.png">
-
-
-## Описание кода
+<a name="description"><h2>Описание кода</h2></a>
 
 *За основу были взяты части [кода из документации](https://www.nsnam.org/docs/models/html/lte-user.html#basic-simulation-program)*
 
@@ -169,3 +165,16 @@ Simulator::Run();
 Simulator::Destroy();
 ```
 Этот код запускает приложения и симуляцию, останавливает ее по истечении времени и завершает работу симулятора.
+
+<a name="result"><h2>Результат</h2></a>
+###### Что означают элементы в таблице можно посмотреть [здесь](https://www.nsnam.org/docs/models/html/lte-user.html#simulation-output)
+* [MAC DL Stats](source/DlMacStats.txt)
+* [MAC UL STATS](source/UlMacStats.txt)
+* [RLC DL Stats](source/DlRlcStats.txt)
+* [RLC UL Stats](source/UlRlcStats.txt)
+* [PDCP DL Stats](source/DlPdcpStats.txt)
+* [PDCP UL Stats](source/UlPdcpStats.txt)
+* Throughput
+<img src = "source/Throughput.png">
+
+
