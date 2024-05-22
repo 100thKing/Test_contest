@@ -10,7 +10,7 @@
 * [Использование кода](#usage)
 * [Описание кода](#description)
 * [Результат](#result)
-
+* [Список литературы](#resource)
 
 <a name=“task”><h2>Тестовое задание</h2></a>
 <details><summary>Задание</summary>
@@ -177,4 +177,8 @@ Simulator::Destroy();
 * Throughput
 <img src = "source/Throughput.png">
 
+<a name="resource"><h2>Список литературы</h2></a>
 
+* [Установка и сборка NS-3](https://www.nsnam.org/docs/release/3.41/tutorial/ns-3-tutorial.pdf)
+* [LTE для NS-3](https://www.nsnam.org/docs/models/html/lte.html)
+* [Реализация full buffer](https://www.nsnam.org/docs/release/3.17/doxygen/lena-dual-stripe_8cc.html) взята из файла lena-dual-stripe
